@@ -17,10 +17,7 @@ if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
   exit 1
 fi
 
-if [ -z "$DISTRIBUTION_ID" ]; then
-  echo "DISTRIBUTION_ID is not set. Quitting."
-  exit 1
-fi
+
 
 # Default to us-east-1 if AWS_REGION not set.
 if [ -z "$AWS_REGION" ]; then
@@ -48,8 +45,18 @@ sh -c "aws s3 sync ${SOURCE_DIR:-.} s3://${AWS_S3_BUCKET}/${DEST_DIR} \
               --profile s3-sync-action \
               --no-progress \
               ${ENDPOINT_APPEND} $*"
-              
-sh -c 'aws cloudfront create-invalidation --distribution-id ${DISTRIBUTION_ID} --paths "/*" --profile s3-sync-action'
+
+# Default to us-east-1 if AWS_REGION not set.
+if [ -z "$INVALIDATION_PATH" ]; then
+  INVALIDATION_PATH="/*"
+fi
+
+if [ -z "$DISTRIBUTION_ID" ]; then
+  echo "DISTRIBUTION_ID is not set"
+else
+  sh -c 'aws cloudfront create-invalidation --distribution-id ${DISTRIBUTION_ID} --paths "$INVALIDATION_PATH" --profile s3-sync-action'
+fi
+
 
 # Clear out credentials after we're done.
 # We need to re-run `aws configure` with bogus input instead of
